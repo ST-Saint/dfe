@@ -1,8 +1,10 @@
-package edu.purdue.dfe;
+package edu.purdue.dfe.instrument;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -11,12 +13,17 @@ import java.security.ProtectionDomain;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import edu.purdue.dfe.instrument.CRC64;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
-public class DfeInstructionTransformer implements ClassFileTransformer {
+public class DfeTransformer implements ClassFileTransformer {
     private static final String instDir = null;
 
     static Map<String, byte[]> instrumentedBytes = new TreeMap<>();
@@ -25,11 +32,61 @@ public class DfeInstructionTransformer implements ClassFileTransformer {
             "java/util/function" };
     private static String[] includes = {};
 
+    private static final String ADDRESS = "localhost";
+
+    private static final int PORT = 6324;
+
+    private static class Handler implements Runnable {
+
+        private final Socket socket;
+
+        private final int maxn = 10240;
+
+        private byte[] buffer;
+
+        Handler(final Socket socket) throws IOException {
+            this.socket = socket;
+            buffer = new byte[maxn];
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    OutputStream out = socket.getOutputStream();
+                    InputStream in = socket.getInputStream();
+                    in.read(buffer);
+                    System.out.println("Client get: " + new String(buffer));
+                    System.out.println("Client send " + new String("test cleint".getBytes()));
+                    out.write("test client".getBytes());
+                } catch (final IOException e) {
+                    // e.printStackTrace();
+                }
+                // break;
+            }
+        }
+
+    }
+
+    public static void startDfeClient() {
+        try {
+            final Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
+            // socket.
+            // final ServerSocket socket = new ServerSocket(PORT, 0, InetAddress.getByName(ADDRESS));
+            final Handler handler = new Handler(socket);
+            new Thread(handler).start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void premain(String agentArgs, Instrumentation inst) throws ClassNotFoundException {
 
         preloadClasses();
 
-        inst.addTransformer(new DfeInstructionTransformer(), true);
+        startDfeClient();
+
+        inst.addTransformer(new DfeTransformer(), true);
         if (inst.isRetransformClassesSupported()) {
             for (Class clazz : inst.getAllLoadedClasses()) {
                 try {
@@ -117,10 +174,10 @@ public class DfeInstructionTransformer implements ClassFileTransformer {
 
             byte[] ret = cbuf;
             try {
-
+                Long classId = CRC64.classId(cbuf);
                 ClassReader cr = new ClassReader(cbuf);
                 ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-                ClassVisitor cv = new InstructionClassAdapter(cw, cname);
+                ClassVisitor cv = new InstructionClassAdapter(cw, cname, classId);
 
                 cr.accept(cv, 0);
 

@@ -1,4 +1,4 @@
-package edu.purdue.dfe;
+package edu.purdue.dfe.instrument;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -25,4 +25,5 @@ public class InstrumentUtils {
             mv.visitLdcInsn(Integer.valueOf(value));
         }
     }
+
 }

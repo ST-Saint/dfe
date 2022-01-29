@@ -1,4 +1,4 @@
-package edu.purdue.dfe;
+package edu.purdue.dfe.instrument;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;

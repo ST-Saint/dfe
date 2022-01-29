@@ -1,4 +1,4 @@
-package edu.purdue.dfe;
+package edu.purdue.dfe.instrument;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.net.URLClassLoader;
 import org.apache.commons.io.IOUtils;
 
 public class DfeClassLoader extends URLClassLoader {
-    private ClassFileTransformer transformer = new DfeInstructionTransformer();
+    private ClassFileTransformer transformer = new DfeTransformer();
 
     public DfeClassLoader(URL[] urls, ClassLoader parent) {
         super(urls, parent);
